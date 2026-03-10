@@ -1,5 +1,5 @@
 import { Router } from "express"
-import nodemailer from "nodemailer"
+import { sendEmail } from "../../lib/mail.js"
 import crypto from "crypto"
 import Invite from "../../models/Invite.js"
 import { connectDB } from "../../lib/db.js"
@@ -35,22 +35,10 @@ router.post("/", async (req, res) => {
       { upsert: true, new: true }
     )
 
-    // Send email
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    })
-
     const baseUrl = process.env.APP_URL || "http://localhost:3000"
     const setPasswordLink = `${baseUrl}/set-password?email=${encodeURIComponent(email)}&token=${rawToken}`
 
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || "noreply@cop.local",
+    await sendEmail({
       to: email,
       subject: "You are invited to COP CMS Admin",
       html: `

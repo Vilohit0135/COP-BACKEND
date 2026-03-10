@@ -5,7 +5,6 @@ import User from "../models/User.js"
 // ── Route → section mapping ───────────────────────────────────────────────────
 export const ROUTE_SECTION_MAP = {
   "/api/admin/pages": "pages",
-  "/api/admin/blogs": "blogs",
   "/api/admin/providers": "providers",
   "/api/admin/courses": "courses",
   "/api/admin/degree-types": "degree-types",
@@ -21,6 +20,9 @@ export const ROUTE_SECTION_MAP = {
  * Get section from request path
  */
 function getSectionFromPath(pathname) {
+  // Special case: anyone can see their own info/profile
+  if (pathname.endsWith("/self")) return null;
+
   // Exact match first
   if (ROUTE_SECTION_MAP[pathname]) return ROUTE_SECTION_MAP[pathname]
 

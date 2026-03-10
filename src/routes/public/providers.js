@@ -10,12 +10,11 @@ const router = Router()
 router.get("/", async (req, res) => {
   try {
     await connectDB()
-    const query = { publicationStatus: "published", isActive: true }
-    if (req.query.type) query.type = req.query.type
+    const query = { isActive: "active" }
     if (req.query.featured === "true") query.isFeatured = true
 
     const providers = await Provider.find(query)
-      .select("name slug logo shortExcerpt type isFeatured averageRating reviewCount")
+      .select("name slug logo shortExcerpt isFeatured averageRating")
       .sort({ isFeatured: -1, createdAt: -1 })
 
     res.json(providers)
@@ -30,8 +29,7 @@ router.get("/:slug", async (req, res) => {
     await connectDB()
     const provider = await Provider.findOne({
       slug: req.params.slug,
-      publicationStatus: "published",
-      isActive: true,
+      isActive: "active",
     })
 
     if (!provider) return res.status(404).json({ error: "Provider not found" })

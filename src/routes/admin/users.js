@@ -7,6 +7,21 @@ const router = Router()
 router.use(withClerk)
 router.use(requireAdminAuth)
 
+// GET /api/admin/users/self — get current user's role and access
+router.get("/self", async (req, res) => {
+  try {
+    const user = req.dbUser // Already attached by requireAdminAuth
+    res.json({
+      userId: user.clerkId,
+      email: user.email,
+      role: user.role,
+      access: user.access || [],
+    })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // GET /api/admin/users — list all active users
 router.get("/", async (req, res) => {
   try {

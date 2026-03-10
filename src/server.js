@@ -7,7 +7,7 @@ import { connectDB } from "./lib/db.js"
 // ── Route imports ─────────────────────────────────────────────────────────────
 // Admin routes (Clerk-protected)
 import activitiesRouter from "./routes/admin/activities.js"
-import blogsRouter from "./routes/admin/blogs.js"
+
 import coursesRouter from "./routes/admin/courses.js"
 import dashboardRouter from "./routes/admin/dashboard.js"
 import degreeTypesRouter from "./routes/admin/degreeTypes.js"
@@ -25,8 +25,6 @@ import authRouter from "./routes/auth/index.js"
 // Public routes (no auth)
 import publicRouter from "./routes/public/index.js"
 
-// Debug routes
-import debugRouter from "./routes/debug.js"
 
 // ── App setup ─────────────────────────────────────────────────────────────────
 const app = express()
@@ -68,12 +66,10 @@ app.use("/api/auth", authRouter)
 // Public endpoints — no auth
 app.use("/api/public", publicRouter)
 
-// Debug endpoints — for development
-app.use("/api/debug", debugRouter)
+
 
 // Admin routes — all protected by Clerk + section access
 app.use("/api/admin/activities", activitiesRouter)
-app.use("/api/admin/blogs", blogsRouter)
 app.use("/api/admin/courses", coursesRouter)
 app.use("/api/admin/dashboard", dashboardRouter)
 app.use("/api/admin/degree-types", degreeTypesRouter)
