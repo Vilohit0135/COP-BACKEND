@@ -22,6 +22,8 @@ const providerCourseSchema = new mongoose.Schema(
     examPattern: { type: String },
     employerAcceptance: { type: String, enum: ["High", "Medium", "Low"], default: "Medium" },
     difficultyLevel: { type: String, enum: ["Beginner", "Intermediate", "Advanced"], default: "Intermediate" },
+    bestROI: { type: Boolean, default: false },
+    trending: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
@@ -33,6 +35,24 @@ providerCourseSchema.index({ specializationId: 1 })
 providerCourseSchema.index({ providerId: 1 })
 providerCourseSchema.index({ degreeTypeId: 1 })
 providerCourseSchema.index({ isActive: 1 })
+providerCourseSchema.index({ bestROI: 1 })
+providerCourseSchema.index({ trending: 1 })
 providerCourseSchema.index({ slug: 1 }, { unique: true })
+
+providerCourseSchema.pre("save", async function (next) {
+  if (this.bestROI) {
+    await this.constructor.updateMany(
+      { providerId: this.providerId, _id: { $ne: this._id } },
+      { $set: { bestROI: false } }
+    )
+  }
+  if (this.trending) {
+    await this.constructor.updateMany(
+      { providerId: this.providerId, _id: { $ne: this._id } },
+      { $set: { trending: false } }
+    )
+  }
+  next()
+})
 
 export default mongoose.models.ProviderCourse || mongoose.model("ProviderCourse", providerCourseSchema, "providercourses")

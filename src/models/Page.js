@@ -18,6 +18,7 @@ const fieldSchema = new mongoose.Schema(
 
 const sectionSchema = new mongoose.Schema(
   {
+    sectionIndex: { type: Number, required: true },
     title: { type: String, required: true },
     apiIdentifier: { type: String, required: true },
     description: String,

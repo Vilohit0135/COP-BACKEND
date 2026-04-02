@@ -11,6 +11,8 @@ const providerSchema = new mongoose.Schema(
     shortExcerpt: { type: String },
     contentBlocks: [{ type: mongoose.Schema.Types.Mixed }], // For Tiptap and Images
     isFeatured: { type: Boolean, default: false },
+    bestROI: { type: Boolean, default: false },
+    trending: { type: Boolean, default: false },
     isActive: { type: String, enum: ["active", "inactive"], default: "active" },
     averageRating: { type: Number, default: 0 },
     aboutContent: { type: mongoose.Schema.Types.Mixed },
@@ -49,6 +51,24 @@ const providerSchema = new mongoose.Schema(
 
 providerSchema.index({ isActive: 1 })
 providerSchema.index({ isFeatured: -1 })
+providerSchema.index({ bestROI: 1 })
+providerSchema.index({ trending: 1 })
 providerSchema.index({ name: "text", shortExcerpt: "text" })
+
+providerSchema.pre("save", async function (next) {
+  if (this.bestROI) {
+    await this.constructor.updateMany(
+      { _id: { $ne: this._id } },
+      { $set: { bestROI: false } }
+    );
+  }
+  if (this.trending) {
+    await this.constructor.updateMany(
+      { _id: { $ne: this._id } },
+      { $set: { trending: false } }
+    );
+  }
+  next();
+});
 
 export default mongoose.models.Provider || mongoose.model("Provider", providerSchema, "providers")

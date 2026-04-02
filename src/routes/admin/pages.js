@@ -77,6 +77,37 @@ router.put("/:slug", async (req, res) => {
     const { userId, userName, userEmail } = await getClerkUserInfo(req.clerkUserId)
     const body = req.body
 
+    // Get current page to check for removed/reordered sections
+    const currentPage = await Page.findOne({ slug: req.params.slug })
+    if (!currentPage) return res.status(404).json({ error: "Page not found" })
+
+    const currentSectionApiIds = currentPage.sections.map(s => s.apiIdentifier)
+    const newSectionApiIds = body.sections.map(s => s.apiIdentifier)
+    const removedSectionApiIds = currentSectionApiIds.filter(id => !newSectionApiIds.includes(id))
+
+    // Delete content for removed sections
+    if (removedSectionApiIds.length > 0) {
+      await PageContent.deleteMany({
+        pageSlug: req.params.slug,
+        sectionApiId: { $in: removedSectionApiIds }
+      })
+    }
+
+    // Handle section reordering: update sectionIndex in PageContent for all sections
+    // Create a map of apiId -> new sectionIndex
+    const sectionIndexMap = {}
+    body.sections.forEach((section, idx) => {
+      sectionIndexMap[section.apiIdentifier] = idx
+    })
+
+    // Update all PageContent records with new sectionIndex
+    for (const [apiId, newIndex] of Object.entries(sectionIndexMap)) {
+      await PageContent.updateMany(
+        { pageSlug: req.params.slug, sectionApiId: apiId },
+        { $set: { sectionIndex: newIndex } }
+      )
+    }
+
     const page = await Page.findOneAndUpdate(
       { slug: req.params.slug },
       {
@@ -88,8 +119,6 @@ router.put("/:slug", async (req, res) => {
       },
       { new: true, runValidators: true }
     )
-
-    if (!page) return res.status(404).json({ error: "Page not found" })
 
     await logActivity({
       userId, userName, userEmail,
@@ -110,14 +139,19 @@ router.delete("/:slug", async (req, res) => {
     await connectDB()
     const { userId, userName, userEmail } = await getClerkUserInfo(req.clerkUserId)
 
-    const page = await Page.findOneAndDelete({ slug: req.params.slug })
+    const page = await Page.findOne({ slug: req.params.slug })
     if (!page) return res.status(404).json({ error: "Page not found" })
+
+    // Delete associated page content
+    await PageContent.deleteMany({ pageSlug: req.params.slug })
+
+    await Page.findOneAndDelete({ slug: req.params.slug })
 
     await logActivity({
       userId, userName, userEmail,
       action: "delete", section: "pages",
       itemId: page._id, itemName: page.title,
-      details: `Deleted page: ${page.title}`,
+      details: `Deleted page: ${page.title} and its content`,
     })
 
     res.json({ success: true })
@@ -136,17 +170,17 @@ router.get("/:slug/content", async (req, res) => {
 
     const page = await Page.findOne({ slug }).lean()
     const rawItems = await PageContent.find({ pageSlug: slug }).sort({
-      sectionApiId: 1,
+      sectionIndex: 1,
       itemIndex: 1,
     })
 
-    // Backfill sectionApiId for old records
+    // Backfill sectionIndex/sectionApiId for old records
     const contentItems = rawItems.map((item) => {
-      if (!item.sectionApiId && typeof item.sectionIndex === "number" && page) {
-        const sec = page.sections[item.sectionIndex]
-        if (sec?.apiIdentifier) {
-          item = item.toObject()
-          item.sectionApiId = sec.apiIdentifier
+      if (!item.sectionIndex && typeof item.sectionIndex === "undefined" && page) {
+        const sec = page.sections.find(s => s.apiIdentifier === item.sectionApiId)
+        if (sec) {
+          item = item.toObject ? item.toObject() : { ...item }
+          item.sectionIndex = sec.sectionIndex
         }
       }
       return item
@@ -164,25 +198,42 @@ router.post("/:slug/content", async (req, res) => {
     await connectDB()
     const { userId, userName, userEmail } = await getClerkUserInfo(req.clerkUserId)
     const { slug } = req.params
-    let { sectionApiId, itemIndex = 0, values, originalItemIndex, sectionIndex } = req.body
+    let { sectionApiId, sectionIndex, itemIndex = 0, values, originalItemIndex } = req.body
 
     const page = await Page.findOne({ slug })
     if (!page) return res.status(404).json({ error: "Page not found" })
 
-    // Convert sectionIndex → sectionApiId if needed
-    if (!sectionApiId && typeof sectionIndex !== "undefined") {
-      const sec = page.sections[sectionIndex]
-      if (sec?.apiIdentifier) sectionApiId = sec.apiIdentifier
+    // Resolve sectionApiId and sectionIndex from section data
+    let resolvedSectionIndex = sectionIndex
+    let resolvedSectionApiId = sectionApiId
+
+    if (!resolvedSectionApiId && typeof sectionIndex === "number") {
+      const sec = page.sections.find(s => s.sectionIndex === sectionIndex)
+      if (sec?.apiIdentifier) {
+        resolvedSectionApiId = sec.apiIdentifier
+        resolvedSectionIndex = sectionIndex
+      }
+    }
+
+    if (!resolvedSectionIndex && resolvedSectionApiId) {
+      const sec = page.sections.find(s => s.apiIdentifier === resolvedSectionApiId)
+      if (sec?.sectionIndex !== undefined) {
+        resolvedSectionIndex = sec.sectionIndex
+      }
+    }
+
+    if (!resolvedSectionApiId || resolvedSectionIndex === undefined) {
+      return res.status(400).json({ error: "sectionApiId and sectionIndex are required" })
     }
 
     let content = null
     let action = "create"
 
     if (originalItemIndex !== undefined && originalItemIndex !== itemIndex) {
-      content = await PageContent.findOne({ pageSlug: slug, sectionApiId, itemIndex: originalItemIndex })
+      content = await PageContent.findOne({ pageSlug: slug, sectionApiId: resolvedSectionApiId, itemIndex: originalItemIndex })
     }
     if (!content) {
-      content = await PageContent.findOne({ pageSlug: slug, sectionApiId, itemIndex })
+      content = await PageContent.findOne({ pageSlug: slug, sectionApiId: resolvedSectionApiId, itemIndex })
     }
 
     if (content) {
@@ -192,7 +243,13 @@ router.post("/:slug/content", async (req, res) => {
       }
       action = "update"
     } else {
-      content = new PageContent({ pageSlug: slug, sectionApiId, itemIndex, values })
+      content = new PageContent({
+        pageSlug: slug,
+        sectionApiId: resolvedSectionApiId,
+        sectionIndex: resolvedSectionIndex,
+        itemIndex,
+        values
+      })
     }
 
     await content.save()
@@ -201,7 +258,7 @@ router.post("/:slug/content", async (req, res) => {
       userId, userName, userEmail,
       action, section: "page-content",
       itemName: page.title,
-      details: `${action}d content for page "${page.title}" section ${sectionApiId}`,
+      details: `${action}d content for page "${page.title}" section ${resolvedSectionApiId} (index ${resolvedSectionIndex})`,
     })
 
     res.status(201).json(content)
@@ -216,14 +273,19 @@ router.delete("/:slug/content", async (req, res) => {
     await connectDB()
     const { userId, userName, userEmail } = await getClerkUserInfo(req.clerkUserId)
     const { slug } = req.params
-    let { sectionApiId, itemIndex = 0, sectionIndex } = req.body
+    let { sectionApiId, sectionIndex, itemIndex = 0 } = req.body
 
     const page = await Page.findOne({ slug })
     if (!page) return res.status(404).json({ error: "Page not found" })
 
-    if (!sectionApiId && typeof sectionIndex !== "undefined") {
-      const sec = page.sections[sectionIndex]
+    // Resolve sectionApiId from sectionIndex if needed
+    if (!sectionApiId && typeof sectionIndex === "number") {
+      const sec = page.sections.find(s => s.sectionIndex === sectionIndex)
       if (sec?.apiIdentifier) sectionApiId = sec.apiIdentifier
+    }
+
+    if (!sectionApiId) {
+      return res.status(400).json({ error: "sectionApiId or sectionIndex is required" })
     }
 
     const result = await PageContent.deleteOne({ pageSlug: slug, sectionApiId, itemIndex })
@@ -233,7 +295,7 @@ router.delete("/:slug/content", async (req, res) => {
       userId, userName, userEmail,
       action: "delete", section: "page-content",
       itemName: page.title,
-      details: `Deleted content for page "${page.title}" section ${sectionApiId}`,
+      details: `Deleted content for page "${page.title}" section ${sectionApiId} (item ${itemIndex})`,
     })
 
     res.json({ success: true })
