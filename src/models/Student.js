@@ -3,10 +3,14 @@ import bcrypt from "bcryptjs"
 
 const studentSchema = new mongoose.Schema(
     {
-        name: { type: String, required: true, trim: true },
-        email: { type: String, required: true, unique: true, trim: true, lowercase: true },
-        phone: { type: String, required: true, trim: true },
+        name: { type: String, trim: true },
+        firstName: { type: String, trim: true },
+        lastName: { type: String, trim: true },
+        email: { type: String, unique: true, sparse: true, trim: true, lowercase: true },
+        phone: { type: String, unique: true, sparse: true, trim: true },
         password: { type: String, required: true },
+        profilePhoto: { type: String, trim: true },
+        profilePhotoPublicId: { type: String, trim: true },
         isActive: { type: Boolean, default: true },
         courseOfInterest: { type: String },
         dateOfBirth: { type: Date },
@@ -36,10 +40,20 @@ const studentSchema = new mongoose.Schema(
                 createdAt: { type: Date, default: Date.now },
             },
         ],
+        resetPasswordToken: { type: String },
+        resetPasswordExpires: { type: Date },
         metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
     },
     { timestamps: true }
 )
+
+// Ensure at least email or phone is provided
+studentSchema.pre("validate", function (next) {
+    if (!this.email && !this.phone) {
+        return next(new Error("At least email or phone number is required"))
+    }
+    next()
+})
 
 // Hash password before saving
 studentSchema.pre("save", async function (next) {

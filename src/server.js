@@ -18,6 +18,8 @@ import providersRouter from "./routes/admin/providers.js"
 import reviewsRouter from "./routes/admin/reviews.js"
 import specializationsRouter from "./routes/admin/specializations.js"
 import usersRouter from "./routes/admin/users.js"
+import studentsRouter from "./routes/admin/students.js"
+import uploadsRouter from "./routes/admin/uploads.js"
 
 // Auth routes (custom invite system)
 import authRouter from "./routes/auth/index.js"
@@ -79,6 +81,8 @@ app.use("/api/admin/provider-courses", providerCoursesRouter)
 app.use("/api/admin/providers", providersRouter)
 app.use("/api/admin/reviews", reviewsRouter)
 app.use("/api/admin/specializations", specializationsRouter)
+app.use("/api/admin/students", studentsRouter)
+app.use("/api/admin/uploads", uploadsRouter)
 app.use("/api/admin/users", usersRouter)
 
 // ── 404 handler ───────────────────────────────────────────────────────────────

@@ -5,6 +5,9 @@ const courseSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     slug: { type: String, required: true, lowercase: true, trim: true },
     degreeTypeId: { type: mongoose.Schema.Types.ObjectId, ref: "DegreeType", required: true },
+    approvals: [{ type: String, trim: true }],
+    highlights: [{ type: String, trim: true }],
+    contentBlocks: [{ type: mongoose.Schema.Types.Mixed }],
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
