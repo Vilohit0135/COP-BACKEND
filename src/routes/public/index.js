@@ -4,6 +4,9 @@ import providersRouter from "./providers.js"
 import reviewsRouter from "./reviews.js"
 import pageContentRouter from "./pageContent.js"
 import studentAuthRouter from "./studentAuth.js"
+import coursesRouter from "./courses.js"
+import degreeTypesRouter from "./degreeTypes.js"
+import specializationsRouter from "./specializations.js"
 
 const router = Router()
 
@@ -22,5 +25,9 @@ router.use("/page-content", pageContentRouter)
 
 // Student Auth Profile & Signup
 router.use("/student", studentAuthRouter)
+
+router.use("/courses", coursesRouter)
+router.use("/degree-types", degreeTypesRouter)
+router.use("/specializations", specializationsRouter)
 
 export default router
