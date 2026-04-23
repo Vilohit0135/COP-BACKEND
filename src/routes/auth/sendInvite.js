@@ -2,19 +2,34 @@ import { Router } from "express"
 import { sendEmail } from "../../lib/mail.js"
 import crypto from "crypto"
 import Invite from "../../models/Invite.js"
+import User from "../../models/User.js"
 import { connectDB } from "../../lib/db.js"
+import { withClerk, requireAdminAuth } from "../../middleware/auth.js"
 
 const router = Router()
+
+router.use(withClerk)
+router.use(requireAdminAuth)
 
 // POST /api/auth/send-invite
 router.post("/", async (req, res) => {
   try {
     await connectDB()
 
-    const { email, access = [], role = "viewer" } = req.body
+    // Only admins or users with "users" section access can invite
+    const inviter = req.dbUser
+    if (inviter.role !== "admin" && !inviter.access?.includes("users")) {
+      return res.status(403).json({ error: "You don't have permission to invite users" })
+    }
 
-    if (!email) {
+    const rawEmail = (req.body.email || "").trim().toLowerCase()
+    const { access = [], role = "viewer" } = req.body
+
+    if (!rawEmail) {
       return res.status(400).json({ error: "Email is required" })
+    }
+    if (!["admin", "viewer"].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" })
     }
 
     // Generate raw token (sent in email) + hash (stored in DB)
@@ -24,22 +39,30 @@ router.post("/", async (req, res) => {
 
     // Upsert invite
     const invite = await Invite.findOneAndUpdate(
-      { email },
+      { email: rawEmail },
       {
+        email: rawEmail,
         access,
         role,
         passwordSetupTokenHash: tokenHash,
         passwordSetupExpiresAt: expiresAt,
         status: "pending",
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    )
+
+    // If a User already exists for this email (re-invite after password was set),
+    // sync their role/access immediately so they don't have to click the new link.
+    await User.findOneAndUpdate(
+      { email: rawEmail },
+      { role, access, isActive: true },
     )
 
     const baseUrl = process.env.APP_URL || "http://localhost:3000"
-    const setPasswordLink = `${baseUrl}/set-password?email=${encodeURIComponent(email)}&token=${rawToken}`
+    const setPasswordLink = `${baseUrl}/set-password?email=${encodeURIComponent(rawEmail)}&token=${rawToken}`
 
     await sendEmail({
-      to: email,
+      to: rawEmail,
       subject: "You are invited to COP CMS Admin",
       html: `
         <h2>You've been invited to COP CMS</h2>

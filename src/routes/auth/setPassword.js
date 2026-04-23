@@ -22,7 +22,8 @@ router.post("/", async (req, res) => {
   try {
     await connectDB()
 
-    const { email, token, password } = req.body
+    const email = (req.body.email || "").trim().toLowerCase()
+    const { token, password } = req.body
 
     if (!email || !token || !password) {
       return res.status(400).json({ error: "Email, token, and password are required" })

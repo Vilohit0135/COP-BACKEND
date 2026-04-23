@@ -27,12 +27,12 @@ router.get("/", async (req, res) => {
   try {
     await connectDB()
 
-    const users = await User.find({ isActive: true })
-      .select("clerkId _id email role access isActive createdAt")
+    const users = await User.find({ isActive: true, clerkId: { $exists: true, $ne: null } })
+      .select("clerkId email role access isActive createdAt")
       .lean()
 
     const mappedUsers = users.map((u) => ({
-      userId: u.clerkId || String(u._id),
+      userId: u.clerkId,
       userName: u.email?.split("@")[0] || u.email,
       userEmail: u.email,
       role: u.role,

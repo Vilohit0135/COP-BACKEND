@@ -12,6 +12,7 @@ export const ROUTE_SECTION_MAP = {
   "/api/admin/provider-courses": "provider-courses",
   "/api/admin/leads": "leads",
   "/api/admin/reviews": "reviews",
+  "/api/admin/students": "students",
   "/api/admin/users": "users",
   "/api/admin/activities": "activities",
 }
