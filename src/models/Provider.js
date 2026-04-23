@@ -56,12 +56,8 @@ providerSchema.index({ trending: 1 })
 providerSchema.index({ name: "text", shortExcerpt: "text" })
 
 providerSchema.pre("save", async function (next) {
-  if (this.bestROI) {
-    await this.constructor.updateMany(
-      { _id: { $ne: this._id } },
-      { $set: { bestROI: false } }
-    );
-  }
+  // Multiple providers can be marked as bestROI simultaneously.
+  // Only enforce single-trending: one trending provider at a time.
   if (this.trending) {
     await this.constructor.updateMany(
       { _id: { $ne: this._id } },

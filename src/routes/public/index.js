@@ -5,6 +5,7 @@ import reviewsRouter from "./reviews.js"
 import pageContentRouter from "./pageContent.js"
 import studentAuthRouter from "./student/index.js"
 import coursesRouter from "./courses.js"
+import coursesSummaryRouter from "./coursesSummary.js"
 import degreeTypesRouter from "./degreeTypes.js"
 import specializationsRouter from "./specializations.js"
 
@@ -26,6 +27,8 @@ router.use("/page-content", pageContentRouter)
 // Student Auth Profile & Signup
 router.use("/student", studentAuthRouter)
 
+// home-summary must be mounted before /courses to avoid /:identifier matching "home-summary"
+router.use("/courses/home-summary", coursesSummaryRouter)
 router.use("/courses", coursesRouter)
 router.use("/degree-types", degreeTypesRouter)
 router.use("/specializations", specializationsRouter)
