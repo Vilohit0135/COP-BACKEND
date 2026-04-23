@@ -6,6 +6,85 @@ import ProviderCourse from "../../models/ProviderCourse.js"
 
 const router = Router()
 
+// GET /api/public/providers/programs/best-roi — courses from bestROI providers
+router.get("/programs/best-roi", async (req, res) => {
+  try {
+    await connectDB()
+
+    // Find all active providers marked as bestROI
+    const bestROIProviders = await Provider.find({ bestROI: true, isActive: "active" })
+      .select("name slug logo coverImage averageRating trending shortExcerpt")
+
+    if (!bestROIProviders.length) return res.json([])
+
+    const providerIds = bestROIProviders.map((p) => p._id)
+
+    // Build a lookup map: providerId → provider
+    const providerMap = {}
+    for (const p of bestROIProviders) {
+      providerMap[p._id.toString()] = p
+    }
+
+    // Fetch active ProviderCourses for these providers
+    const courses = await ProviderCourse.find({
+      providerId: { $in: providerIds },
+      isActive: true,
+    })
+      .select("providerId title slug thumbnail fees discountedFees duration trending approvals highlights")
+      .sort({ trending: -1, createdAt: -1 })
+
+    // Track which providers have at least one course
+    const providersWithCourses = new Set()
+
+    const result = courses.map((c) => {
+      const provider = providerMap[c.providerId?.toString()] || {}
+      providersWithCourses.add(c.providerId?.toString())
+      return {
+        _id: c._id,
+        title: c.title,
+        slug: c.slug,
+        thumbnail: c.thumbnail || provider.coverImage || null,
+        fees: c.fees,
+        discountedFees: c.discountedFees,
+        duration: c.duration,
+        trending: c.trending || provider.trending || false,
+        certifications: c.approvals || [],
+        features: c.highlights || [],
+        rating: provider.averageRating || 0,
+        providerName: provider.name || "",
+        providerSlug: provider.slug || "",
+        providerLogo: provider.logo || "",
+      }
+    })
+
+    // For bestROI providers with NO courses, add a provider-level placeholder card
+    for (const p of bestROIProviders) {
+      if (!providersWithCourses.has(p._id.toString())) {
+        result.push({
+          _id: `provider-${p._id}`,
+          title: p.name,
+          slug: p.slug,
+          thumbnail: p.coverImage || null,
+          fees: 0,
+          discountedFees: 0,
+          duration: null,
+          trending: p.trending || false,
+          certifications: [],
+          features: p.shortExcerpt ? [p.shortExcerpt] : [],
+          rating: p.averageRating || 0,
+          providerName: p.name || "",
+          providerSlug: p.slug || "",
+          providerLogo: p.logo || "",
+        })
+      }
+    }
+
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch best ROI programs", details: err.message })
+  }
+})
+
 // GET /api/public/providers — list all published providers
 router.get("/", async (req, res) => {
   try {

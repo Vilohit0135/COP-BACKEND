@@ -1,0 +1,78 @@
+import { Router } from "express"
+import { connectDB } from "../../lib/db.js"
+import Course from "../../models/Course.js"
+import ProviderCourse from "../../models/ProviderCourse.js"
+
+const router = Router()
+
+// GET /api/public/courses/home-summary — courses grouped by degree type with aggregated stats
+router.get("/", async (req, res) => {
+  try {
+    await connectDB()
+
+    const courses = await Course.find({ isActive: true })
+      .populate("degreeTypeId")
+      .lean()
+
+    const courseIds = courses.map((c) => c._id)
+
+    // Aggregate per-course stats from ProviderCourse
+    const providerStats = await ProviderCourse.aggregate([
+      { $match: { courseId: { $in: courseIds }, isActive: true } },
+      {
+        $group: {
+          _id: "$courseId",
+          minFees: { $min: "$fees" },
+          providerCount: { $sum: 1 },
+          isTrending: { $max: { $cond: ["$trending", 1, 0] } },
+          duration: { $first: "$duration" },
+          thumbnail: { $first: "$thumbnail" },
+          shortDescription: { $first: "$shortDescription" },
+        },
+      },
+    ])
+
+    const statsMap = {}
+    providerStats.forEach((s) => {
+      statsMap[s._id.toString()] = s
+    })
+
+    // Group courses by degree type
+    const grouped = {}
+    courses.forEach((course) => {
+      const degreeType = course.degreeTypeId
+      if (!degreeType) return
+
+      const key = degreeType.slug
+      if (!grouped[key]) {
+        grouped[key] = {
+          degreeType: { name: degreeType.name, slug: degreeType.slug, order: degreeType.order ?? 0 },
+          courses: [],
+        }
+      }
+
+      const stats = statsMap[course._id.toString()] || {}
+      grouped[key].courses.push({
+        _id: course._id,
+        name: course.name,
+        slug: course.slug,
+        thumbnail: stats.thumbnail || null,
+        shortDescription: stats.shortDescription || "",
+        duration: stats.duration || "",
+        minFees: stats.minFees || 0,
+        providerCount: stats.providerCount || 0,
+        isTrending: stats.isTrending === 1,
+      })
+    })
+
+    // Return sorted by degreeType order
+    const result = Object.values(grouped).sort(
+      (a, b) => (a.degreeType.order ?? 0) - (b.degreeType.order ?? 0)
+    )
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch courses summary", details: err.message })
+  }
+})
+
+export default router
