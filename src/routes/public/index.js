@@ -8,6 +8,8 @@ import coursesRouter from "./courses.js"
 import coursesSummaryRouter from "./coursesSummary.js"
 import degreeTypesRouter from "./degreeTypes.js"
 import specializationsRouter from "./specializations.js"
+import providerCoursesRouter from "./providerCourses.js"
+
 
 const router = Router()
 
@@ -32,5 +34,7 @@ router.use("/courses/home-summary", coursesSummaryRouter)
 router.use("/courses", coursesRouter)
 router.use("/degree-types", degreeTypesRouter)
 router.use("/specializations", specializationsRouter)
+router.use("/provider-courses", providerCoursesRouter)
+
 
 export default router

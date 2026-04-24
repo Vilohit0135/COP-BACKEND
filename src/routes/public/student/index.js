@@ -7,6 +7,7 @@ import profileRouter from "./profile.js"
 import photoRouter from "./photo.js"
 import uploadsRouter from "./uploads.js"
 import shortlistRouter from "./shortlist.js"
+import googleAuthRouter from "./googleAuth.js"
 
 const router = Router()
 
@@ -18,5 +19,6 @@ router.use("/profile", profileRouter)
 router.use("/photo", photoRouter)
 router.use("/uploads", uploadsRouter)
 router.use("/shortlist", shortlistRouter)
+router.use("/google-auth", googleAuthRouter)
 
 export default router
