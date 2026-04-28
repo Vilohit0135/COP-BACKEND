@@ -40,6 +40,7 @@ const providerSchema = new mongoose.Schema(
       description: { type: mongoose.Schema.Types.Mixed },
     },
     faq: [{ question: String, answer: String }],
+    whoShouldChoosePoints: [{ text: String }],
     comparison: {
       location: { type: String },
       feesStartingFrom: { type: Number },
@@ -53,6 +54,10 @@ const providerSchema = new mongoose.Schema(
       averageSalary: { type: Number },
       eligibility: { type: String },
       minimumRequirements: { type: String },
+      ugcDebStatus: { type: Boolean, default: false },
+      naacGrade: { type: String },
+      examType: { type: String },
+      roiScore: { type: String },
     },
     metaTitle: String,
     metaDescription: String,
