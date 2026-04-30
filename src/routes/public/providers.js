@@ -85,6 +85,69 @@ router.get("/programs/best-roi", async (req, res) => {
   }
 })
 
+// GET /api/public/providers/programs/trending — courses from trending providers/courses
+router.get("/programs/trending", async (req, res) => {
+  try {
+    await connectDB()
+
+    // Find active providers marked as trending
+    const trendingProviders = await Provider.find({ trending: true, isActive: "active" })
+      .select("name slug logo coverImage averageRating trending shortExcerpt")
+
+    const providerMap = {}
+    for (const p of trendingProviders) {
+      providerMap[p._id.toString()] = p
+    }
+
+    const providerIds = trendingProviders.map((p) => p._id)
+
+    // Fetch trending ProviderCourses (either course-level or from trending providers)
+    const courses = await ProviderCourse.find({
+      $or: [
+        { trending: true, isActive: true },
+        { providerId: { $in: providerIds }, isActive: true },
+      ],
+    })
+      .select("providerId title slug thumbnail fees discountedFees duration trending approvals highlights")
+      .sort({ trending: -1, createdAt: -1 })
+      .limit(20)
+
+    // Build full provider map including providers from course-level trending
+    const extraProviderIds = courses
+      .map((c) => c.providerId?.toString())
+      .filter((id) => id && !providerMap[id])
+    if (extraProviderIds.length) {
+      const extraProviders = await Provider.find({ _id: { $in: extraProviderIds } })
+        .select("name slug logo coverImage averageRating trending shortExcerpt")
+      for (const p of extraProviders) providerMap[p._id.toString()] = p
+    }
+
+    const result = courses.map((c) => {
+      const provider = providerMap[c.providerId?.toString()] || {}
+      return {
+        _id: c._id,
+        title: c.title,
+        slug: c.slug,
+        thumbnail: c.thumbnail || provider.coverImage || null,
+        fees: c.fees,
+        discountedFees: c.discountedFees,
+        duration: c.duration,
+        trending: c.trending || provider.trending || false,
+        certifications: c.approvals || [],
+        features: c.highlights || [],
+        rating: provider.averageRating || 0,
+        providerName: provider.name || "",
+        providerSlug: provider.slug || "",
+        providerLogo: provider.logo || "",
+      }
+    })
+
+    res.json(result)
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch trending programs", details: err.message })
+  }
+})
+
 // GET /api/public/providers — list all published providers
 router.get("/", async (req, res) => {
   try {
