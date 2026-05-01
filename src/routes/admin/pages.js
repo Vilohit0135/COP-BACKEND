@@ -129,6 +129,18 @@ router.put("/:slug", async (req, res) => {
 
     res.json(page)
   } catch (err) {
+    if (err?.name === "ValidationError") {
+      const fieldErrors = Object.entries(err.errors || {}).map(([path, e]) => ({
+        path,
+        message: e.message,
+      }))
+      return res.status(400).json({
+        error: "Validation failed — please fill in all required fields",
+        fieldErrors,
+        details: err.message,
+      })
+    }
+    console.error("PUT /pages/:slug error:", err)
     res.status(500).json({ error: "Failed to update page", details: err.message })
   }
 })

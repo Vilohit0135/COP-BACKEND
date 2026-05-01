@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { uploadImage } from "../../middleware/upload.js"
+import { uploadImage, uploadMedia } from "../../middleware/upload.js"
 import { uploadBuffer, deleteAsset } from "../../lib/cloudinary.js"
 import { withClerk, requireAdminAuth } from "../../middleware/auth.js"
 
@@ -17,6 +17,26 @@ router.post("/image", uploadImage.single("file"), async (req, res) => {
         res.status(201).json(result)
     } catch (err) {
         console.error("Admin upload error:", err.message)
+        res.status(500).json({ error: err.message || "Upload failed" })
+    }
+})
+
+// POST /api/admin/uploads/media
+// Accepts images, videos, and PDFs. Uses Cloudinary resource_type=auto.
+router.post("/media", uploadMedia.single("file"), async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: "No file uploaded" })
+        const folder = (req.body.folder || "cop/admin").toString()
+
+        let resourceType = "auto"
+        if (req.file.mimetype.startsWith("image/")) resourceType = "image"
+        else if (req.file.mimetype.startsWith("video/")) resourceType = "video"
+        else if (req.file.mimetype === "application/pdf") resourceType = "raw"
+
+        const result = await uploadBuffer(req.file.buffer, { folder, resourceType })
+        res.status(201).json({ ...result, resourceType, mimeType: req.file.mimetype })
+    } catch (err) {
+        console.error("Admin media upload error:", err.message)
         res.status(500).json({ error: err.message || "Upload failed" })
     }
 })
