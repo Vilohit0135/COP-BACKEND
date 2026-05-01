@@ -9,8 +9,29 @@ const router = Router()
 router.get("/", async (req, res) => {
   try {
     await connectDB()
-    const specializations = await Specialization.find({ isActive: true }).populate("courseId")
-    res.json(specializations)
+    const specializations = await Specialization.find({ isActive: true }).populate("courseId").lean()
+    
+    // Get provider counts for each specialization
+    // We count unique providerIds that have at least one active ProviderCourse for that specialization
+    const counts = await ProviderCourse.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: "$specializationId", providerIds: { $addToSet: "$providerId" } } },
+      { $project: { _id: 1, count: { $size: "$providerIds" } } }
+    ])
+    
+    const countsMap = {}
+    counts.forEach(c => {
+      if (c._id) {
+        countsMap[c._id.toString()] = c.count
+      }
+    })
+    
+    const results = specializations.map(s => ({
+      ...s,
+      providerCount: countsMap[s._id.toString()] || 0
+    }))
+    
+    res.json(results)
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch specializations", details: err.message })
   }
