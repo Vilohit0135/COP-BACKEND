@@ -10,6 +10,7 @@ const providerCourseSchema = new mongoose.Schema(
     slug: { type: String, required: true, lowercase: true, trim: true },
     shortDescription: String,
     thumbnail: String,
+    minFees: { type: Number },
     fees: { type: Number, required: true },
     discountedFees: { type: Number },
     duration: { type: String },
