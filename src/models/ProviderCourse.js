@@ -26,6 +26,56 @@ const providerCourseSchema = new mongoose.Schema(
     approvals: [{ type: String, trim: true }],
     highlights: [{ type: String, trim: true }],
     contentBlocks: [{ type: mongoose.Schema.Types.Mixed }],
+
+    // EMI configuration (was used by CMS form but not persisted before)
+    isEmiAvailable: { type: Boolean, default: false },
+    emiStartingAmount: { type: String, trim: true },
+    emiTerms: { type: String, trim: true },
+
+    // Logistics
+    intakeMonths: { type: String, trim: true }, // e.g. "Jan / Jul"
+    language: { type: String, trim: true, default: "English" },
+
+    // UI: Learning Outcomes (what learners will gain)
+    learningOutcomes: [{ type: String, trim: true }],
+
+    // UI: Target Audience
+    whoShouldEnroll: [{ type: String, trim: true }],
+
+    // UI: Program Structure (program-level modules / semesters)
+    programStructure: [
+      {
+        title: { type: String, trim: true },
+        topics: [{ type: String, trim: true }],
+      },
+    ],
+
+    // UI: Career Outcomes (program-specific)
+    careerOutcomes: {
+      topRoles: [{ type: String, trim: true }],
+      averagePackage: { type: String, trim: true },
+      topRecruiters: [{ type: String, trim: true }],
+    },
+
+    // UI: Placement Support services offered with this program
+    placementSupport: [{ type: String, trim: true }],
+
+    // UI: Key Admission Dates
+    keyDates: [
+      {
+        event: { type: String, trim: true },
+        date: { type: String, trim: true },
+      },
+    ],
+
+    // UI: FAQs specific to this program
+    faqs: [
+      {
+        question: { type: String, trim: true },
+        answer: { type: String, trim: true },
+      },
+    ],
+
     bestROI: { type: Boolean, default: false },
     trending: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },

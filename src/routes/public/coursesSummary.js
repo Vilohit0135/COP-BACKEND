@@ -57,7 +57,9 @@ router.get("/", async (req, res) => {
         name: course.name,
         slug: course.slug,
         icon: course.icon || null,
-        thumbnail: course.icon || stats.thumbnail || null,
+        thumbnail: (course.icon && (course.icon.startsWith("/") || course.icon.startsWith("http"))) 
+          ? course.icon 
+          : (stats.thumbnail || null),
         description: course.description || "",
         shortDescription: course.shortDescription || course.description || stats.shortDescription || "",
         duration: course.duration || stats.duration || "",
