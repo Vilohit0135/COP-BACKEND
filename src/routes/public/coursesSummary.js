@@ -56,12 +56,18 @@ router.get("/", async (req, res) => {
         _id: course._id,
         name: course.name,
         slug: course.slug,
-        thumbnail: stats.thumbnail || null,
-        shortDescription: stats.shortDescription || "",
-        duration: stats.duration || "",
-        minFees: stats.minFees || 0,
-        providerCount: stats.providerCount || 0,
-        isTrending: stats.isTrending === 1,
+        icon: course.icon || null,
+        thumbnail: course.icon || stats.thumbnail || null,
+        description: course.description || "",
+        shortDescription: course.shortDescription || course.description || stats.shortDescription || "",
+        duration: course.duration || stats.duration || "",
+        feeStarting: course.feeStarting || stats.minFees || 0,
+        minFees: course.feeStarting || stats.minFees || 0,
+        providerCount: (Array.isArray(course.universities) && course.universities.length > 0) 
+          ? course.universities.length 
+          : (stats.providerCount || 0),
+        universities: course.universities || [],
+        isTrending: course.isTrending || stats.isTrending === 1,
       })
     })
 

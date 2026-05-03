@@ -12,8 +12,9 @@ router.use(requireAdminAuth)
 // GET /api/admin/courses
 router.get("/", async (req, res) => {
   try {
-    await connectDB()
-    const courses = await Course.find().populate("degreeTypeId")
+    const courses = await Course.find()
+      .populate("degreeTypeId")
+      .populate("universities", "name")
     res.json(courses)
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch courses", details: err.message })
@@ -45,8 +46,9 @@ router.post("/", async (req, res) => {
 // GET /api/admin/courses/:id
 router.get("/:id", async (req, res) => {
   try {
-    await connectDB()
-    const course = await Course.findById(req.params.id).populate("degreeTypeId")
+    const course = await Course.findById(req.params.id)
+      .populate("degreeTypeId")
+      .populate("universities", "name")
     if (!course) return res.status(404).json({ error: "Course not found" })
     res.json(course)
   } catch (err) {
@@ -62,6 +64,7 @@ router.put("/:id", async (req, res) => {
 
     const updated = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true })
       .populate("degreeTypeId")
+      .populate("universities", "name")
 
     if (!updated) return res.status(404).json({ error: "Course not found" })
 

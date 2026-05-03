@@ -156,7 +156,7 @@ router.get("/", async (req, res) => {
     if (req.query.featured === "true") query.isFeatured = true
 
     const providers = await Provider.find(query)
-      .select("name slug logo coverImage galleryImages shortExcerpt facts approvals admissionOpen isFeatured averageRating")
+      .select("name slug logo coverImage galleryImages shortExcerpt facts approvals admissionOpen isFeatured averageRating reviewCount comparison ratingBreakdown")
       .sort({ isFeatured: -1, createdAt: -1 })
 
     res.json(providers)

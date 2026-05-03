@@ -70,4 +70,25 @@ router.post("/", async (req, res) => {
     }
 })
 
+/**
+ * @route   GET /api/public/reviews
+ * @desc    Get all active reviews
+ * @access  Public
+ */
+router.get("/", async (req, res) => {
+    try {
+        await connectDB()
+        const reviews = await Review.find({ isActive: true })
+            .populate("providerId", "name logo")
+            .sort({ createdAt: -1 })
+            .limit(10)
+        
+        res.json(reviews)
+    } catch (err) {
+        console.error("Error fetching reviews:", err)
+        res.status(500).json({ error: "Failed to fetch reviews" })
+    }
+})
+
 export default router
+
