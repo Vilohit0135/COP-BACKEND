@@ -8,6 +8,13 @@ const courseSchema = new mongoose.Schema(
     approvals: [{ type: String, trim: true }],
     highlights: [{ type: String, trim: true }],
     contentBlocks: [{ type: mongoose.Schema.Types.Mixed }],
+    description: { type: String, trim: true },
+    shortDescription: { type: String, trim: true },
+    duration: { type: String, trim: true },
+    feeStarting: { type: Number },
+    icon: { type: String },
+    universities: [{ type: mongoose.Schema.Types.ObjectId, ref: "Provider" }],
+    isTrending: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
