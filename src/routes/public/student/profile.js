@@ -8,7 +8,24 @@ const router = Router()
 
 // GET /api/public/student/profile
 router.get("/", requireStudentAuth, async (req, res) => {
-    res.json(req.student)
+    try {
+        await connectDB()
+        // req.student excludes password (-password). Re-query with password
+        // selected so we can expose a hasPassword flag without leaking the hash.
+        const full = await Student.findById(req.student._id).select("+password")
+        if (!full) return res.status(404).json({ error: "Student not found" })
+
+        const obj = full.toObject()
+        const hasPassword = !!obj.password
+        delete obj.password
+        delete obj.resetPasswordToken
+        delete obj.resetPasswordExpires
+
+        res.json({ ...obj, hasPassword })
+    } catch (err) {
+        console.error("Profile fetch error:", err.message)
+        res.status(500).json({ error: "Internal server error" })
+    }
 })
 
 // PUT /api/public/student/profile

@@ -36,10 +36,17 @@ router.post("/", async (req, res) => {
             source: "website_form",
         })
 
-        // Notify Admin via Email
+        // Respond immediately — don't make the user wait for email delivery
+        res.status(201).json({
+            success: true,
+            message: "Review submitted successfully. It will be visible after moderation.",
+            review,
+        })
+
+        // Notify Admin via Email (fire-and-forget, runs after response is sent)
         try {
             const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_FROM || "admin@example.com"
-            await sendEmail({
+            sendEmail({
                 to: adminEmail,
                 subject: `New Review for Moderation: ${title}`,
                 html: `
@@ -54,16 +61,12 @@ router.post("/", async (req, res) => {
           <hr />
           <p>This review is currently <strong>Inactive</strong>. Please log in to the Admin Dashboard to approve or delete it.</p>
         `
+            }).catch(mailErr => {
+                console.error("Failed to send review notification email:", mailErr.message)
             })
         } catch (mailErr) {
             console.error("Failed to send review notification email:", mailErr.message)
         }
-
-        res.status(201).json({
-            success: true,
-            message: "Review submitted successfully. It will be visible after moderation.",
-            review,
-        })
     } catch (err) {
         console.error("Error submitting review:", err)
         res.status(500).json({ error: "Failed to submit review", details: err.message })
