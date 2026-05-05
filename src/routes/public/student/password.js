@@ -100,6 +100,43 @@ router.post("/reset", async (req, res) => {
     }
 })
 
+// POST /api/public/student/password/set   (authenticated, OAuth users only)
+// Allows a student who signed up via OAuth (no password) to set a password
+// so they can also log in with email/password going forward.
+// Body: { newPassword, confirmPassword }
+router.post("/set", requireStudentAuth, async (req, res) => {
+    try {
+        await connectDB()
+        const { newPassword, confirmPassword } = req.body
+        if (!newPassword) {
+            return res.status(400).json({ error: "New password is required" })
+        }
+        if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+            return res.status(400).json({ error: "Passwords do not match" })
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ error: "Password must be at least 6 characters" })
+        }
+
+        const student = await Student.findById(req.student._id).select("+password")
+        if (!student) return res.status(404).json({ error: "Student not found" })
+
+        if (student.password) {
+            return res.status(409).json({
+                error: "A password is already set. Use change password instead.",
+            })
+        }
+
+        student.password = newPassword
+        await student.save()
+
+        res.json({ message: "Password set successfully" })
+    } catch (err) {
+        console.error("Set password error:", err.message)
+        res.status(500).json({ error: "Internal server error" })
+    }
+})
+
 // PUT /api/public/student/password/change   (authenticated)
 // Body: { currentPassword, newPassword, confirmPassword }
 router.put("/change", requireStudentAuth, async (req, res) => {
