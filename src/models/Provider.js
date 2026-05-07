@@ -73,6 +73,13 @@ const providerSchema = new mongoose.Schema(
     metaDescription: String,
     metaKeywords: String,
     canonicalUrl: String,
+    ogTitle: String,
+    ogDescription: String,
+    ogImage: String,
+    twitterTitle: String,
+    twitterDescription: String,
+    twitterImage: String,
+    noindex: { type: Boolean, default: false },
   },
   { timestamps: true }
 )
